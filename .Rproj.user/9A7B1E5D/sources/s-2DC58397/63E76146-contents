@@ -1,0 +1,20 @@
+db <- readr::read_csv("MDD_v1.2_6485species.csv")
+species <- db %>% 
+  select(id, sciName) %>% 
+  rename(sci_id = id) %>% 
+  mutate(id = row_number()) %>% 
+  mutate(version = 1.2) %>% 
+  mutate(sci_name = sciName) %>% 
+  select(id, sci_id, sci_name, version) %>% 
+  mutate(sci_id = as.integer(sci_id))
+
+con <- DBI::dbConnect(RPostgres::Postgres(),
+                      #Driver   = "[your driver's name]",
+                      host   = "db-postgresql-nyc1-45961-do-user-12013676-0.b.db.ondigitalocean.com",
+                      dbname = "defaultdb",
+                      user      = rstudioapi::askForPassword("Database user"),
+                      password      = rstudioapi::askForPassword("Database password"),
+                      port     = 25060)
+species_db <- tbl(con, "species")
+
+dplyr::copy_to(species_db, species, overwrite = FALSE)
