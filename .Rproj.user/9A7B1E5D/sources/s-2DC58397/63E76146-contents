@@ -14,7 +14,6 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
                       dbname = "defaultdb",
                       user      = rstudioapi::askForPassword("Database user"),
                       password      = rstudioapi::askForPassword("Database password"),
-                      port     = 25060)
-species_db <- tbl(con, "species")
+                      port     = 25060"species")
 
 dplyr::copy_to(species_db, species, overwrite = FALSE)
