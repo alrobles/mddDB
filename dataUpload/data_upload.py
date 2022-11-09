@@ -2,8 +2,6 @@ import psycopg2
 from csv import reader
 import pandas as pd
 
-
-
 db = 'defaultdb'
 user = 'doadmin'
 pwd = 'AVNS_kd6af68cOs7XfPxhFJJ'
@@ -21,18 +19,6 @@ csvColumns = {
     'genus':'genus'
     }
 
-database_keys = {
-    'species':{'id': 'id', 'sci_id':'sci_id', 'sci_name': 'sci_name', 'version': 'version'},
-
-    'species_family':{'id': 'id', 'family':'family', 'sub_family': 'sub_family', 'tribe': 'tribe'},
-    'species_family_mapping':{'id': 'id', 'species_id':'species_id', 'family_id': 'family_id'},
-
-    'species_genus':{'id': 'id', 'genus':'genus'},
-    'species_genus_mapping':{'id': 'id', 'species_id':'species_id', 'genus_id': 'genus_id'},
-
-    'species_order':{'id': 'id', 'phylosort':'phylosort','species_order':'species_order'},
-    'species_order_mapping':{'id': 'id', 'species_id':'species_id', 'order_id': 'order_id'},
-    }
 
 def connect_to_db(db, user, pwd, host, port):
     #establishing the connection
