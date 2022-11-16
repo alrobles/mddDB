@@ -16,7 +16,13 @@ csvColumns = {
     'family':'family',
     'subfamily':'subfamily',
     'tribe':'tribe',
-    'genus':'genus'
+    'genus':'genus',
+    'authoritySpeciesAuthor':'authoritySpeciesAuthor',
+    'authoritySpeciesYear':'authoritySpeciesYear',
+    'authorityParentheses':'authorityParentheses',
+    'originalNameCombination':'originalNameCombination',
+    'authoritySpeciesCitation':'authoritySpeciesCitation',
+    'authoritySpeciesLink':'authoritySpeciesLink',
     }
 
 
@@ -106,10 +112,46 @@ def insert_order(order, phylosort):
             except Exception as e1:
                 print("EXCEPTION OCCURED WHILE READING DATA FROM SPECIES_ORDER TABLE for QUERY: {} \n Error: {}".format(sqlString, e1))
 
-def create_mappings(speciesId, familyId, genusId, orderId):
+def insert_authority_details(data):
+    sqlString = "INSERT INTO species_authority_details (species_author,	species_year, parentheses, original_name_combination, species_citation, species_link) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id;"
+    try:
+        cursor.execute(sqlString, 
+            (
+                data[csvColumns['authoritySpeciesAuthor']], 
+                data[csvColumns['authoritySpeciesYear']], 
+                data[csvColumns['authorityParentheses']], 
+                data[csvColumns['originalNameCombination']],
+                data[csvColumns['authoritySpeciesCitation']], 
+                data[csvColumns['authoritySpeciesLink']]
+            )
+        )
+        return cursor.fetchone()['id']
+
+    except Exception as e:
+        print(e)
+        if 'duplicate key value violates unique constraint' in str(e.args):
+            sqlString = "SELECT id from species_authority_details where species_author = %s and  species_year = %s and parentheses = %s and original_name_combination = %s and species_citation = %s and species_link = %s ;"
+            try:
+                cursor.execute(sqlString, 
+                    (
+                        data[csvColumns['authoritySpeciesAuthor']], 
+                        data[csvColumns['authoritySpeciesYear']], 
+                        data[csvColumns['authorityParentheses']], 
+                        data[csvColumns['originalNameCombination']],
+                        data[csvColumns['authoritySpeciesCitation']], 
+                        data[csvColumns['authoritySpeciesLink']]
+                    )
+                )
+                return cursor.fetchone()['id']
+            except Exception as e1:
+                print("EXCEPTION OCCURED WHILE READING DATA FROM SPECIES_ORDER TABLE for QUERY: {} \n Error: {}".format(sqlString, e1))
+
+
+def create_mappings(speciesId, familyId, genusId, orderId, authorityDetailsId):
     sqlStringFamily = "INSERT INTO species_family_mapping (species_id, family_id) VALUES (%s,%s) RETURNING id;"
     sqlStringGenus = "INSERT INTO species_genus_mapping (species_id, genus_id) VALUES (%s,%s) RETURNING id;"
     sqlStringOrder = "INSERT INTO species_order_mapping (species_id, order_id) VALUES (%s,%s) RETURNING id;"
+    sqlStringAuthority = "INSERT INTO species_authority_mapping (species_id, authority_id) VALUES (%s,%s) RETURNING id;"
 
     try:
         cursor.execute(sqlStringFamily, (speciesId, familyId))
@@ -125,19 +167,59 @@ def create_mappings(speciesId, familyId, genusId, orderId):
         cursor.execute(sqlStringOrder, (speciesId, orderId))
     except Exception as e:
         print("EXCEPTION OCCURED WHILE INSERTING DATA INTO MAPPINGS TABLE QUERY: {} \nError: {}".format(sqlStringOrder, e))
+    
+    try:
+        cursor.execute(sqlStringAuthority, (speciesId, authorityDetailsId))
+    except Exception as e:
+        print("EXCEPTION OCCURED WHILE INSERTING DATA INTO MAPPINGS TABLE QUERY: {} \nError: {}".format(sqlStringAuthority, e))
+    
     return
 
+def insert_authority_details(data):
+    sqlString = "INSERT INTO species_authority_details (species_author,	species_year, parentheses, original_name_combination, species_citation, species_link) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id;"
+    try:
+        cursor.execute(sqlString, 
+            (
+                data[csvColumns['authoritySpeciesAuthor']], 
+                data[csvColumns['authoritySpeciesYear']], 
+                data[csvColumns['authorityParentheses']], 
+                data[csvColumns['originalNameCombination']],
+                data[csvColumns['authoritySpeciesCitation']], 
+                data[csvColumns['authoritySpeciesLink']]
+            )
+        )
+        return cursor.fetchone()[0]
+
+    except Exception as e:
+        print(e)
+        if 'duplicate key value violates unique constraint' in str(e.args):
+            sqlString = "SELECT id from species_authority_details where species_author = %s and  species_year = %s and parentheses = %s and original_name_combination = %s and species_citation = %s and species_link = %s ;"
+            try:
+                cursor.execute(sqlString, 
+                    (
+                        data[csvColumns['authoritySpeciesAuthor']], 
+                        data[csvColumns['authoritySpeciesYear']], 
+                        data[csvColumns['authorityParentheses']], 
+                        data[csvColumns['originalNameCombination']],
+                        data[csvColumns['authoritySpeciesCitation']], 
+                        data[csvColumns['authoritySpeciesLink']]
+                    )
+                )
+                return cursor.fetchone()[0]
+            except Exception as e1:
+                print("EXCEPTION OCCURED WHILE READING DATA FROM SPECIES_ORDER TABLE for QUERY: {} \n Error: {}".format(sqlString, e1))
 
 
 def push_to_db(dataFrame, dataVersion):
-    for _, row in dataFrame.iterrows():
+    for index, row in dataFrame.iterrows():
         speciesId = insert_species(row[csvColumns['id']], row[csvColumns['sciName']], dataVersion)
         print(speciesId)
         familyId = insert_family(row[csvColumns['family']], row[csvColumns['subfamily']], row[csvColumns['tribe']])
         genusId = insert_genus(row[csvColumns['genus']])
         orderId = insert_order(row[csvColumns['order']], row[csvColumns['phylosort']])
-        print("Done for species_id: {}, family_id: {}, genus_id: {}, order_id:{}".format(speciesId, familyId, genusId, orderId))
-        create_mappings(speciesId, familyId, genusId, orderId)
+        authorityDetailsId = insert_authority_details(row)
+        print("Done for species_id: {}, family_id: {}, genus_id: {}, order_id:{}, authority_details_id:{}".format(speciesId, familyId, genusId, orderId, authorityDetailsId))
+        create_mappings(speciesId, familyId, genusId, orderId, authorityDetailsId)
     return
 
 
@@ -148,7 +230,7 @@ dataVersion = filePath.split('_')[1]
 cursor, conn = connect_to_db(db, user, pwd, host, port)    
 
 #testing connection and sample query
-cursor.execute('''SELECT * from species limit 2''')
+cursor.execute('''select * from species limit 2''')
 
 result = cursor.fetchall()
 print(result)
